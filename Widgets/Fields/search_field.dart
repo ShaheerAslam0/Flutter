@@ -11,6 +11,8 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with SingleTicker
   bool _folded = true;
   late AnimationController _controller;
   late Animation<double> _widthAnimation;
+  late Animation<double> _iconFadeInAnimation;
+  late Animation<double> _iconFadeOutAnimation;
 
   @override
   void initState() {
@@ -20,7 +22,13 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with SingleTicker
       vsync: this,
     );
 
-    _widthAnimation = Tween<double>(begin: 56.0, end: 0.0).animate(
+    _widthAnimation = Tween<double>(begin: 58.0, end: 0.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    _iconFadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
+    _iconFadeOutAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
   }
@@ -47,45 +55,56 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with SingleTicker
 
     final screenWidth = MediaQuery.of(context).size.width;
     final double targetWidth = screenWidth * 0.7;
-    _widthAnimation = Tween<double>(begin: 56.0, end: targetWidth).animate(
+    _widthAnimation = Tween<double>(begin: 58.0, end: targetWidth).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
 
     return AnimatedBuilder(
-      animation: _controller,
+      animation: Listenable.merge([_controller, _widthAnimation]),
       builder: (context, child) {
         return Container(
           width: _widthAnimation.value,
           height: 56,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(5),
             color: Colors.white,
-            boxShadow: kElevationToShadow[6],
+            border: Border.all(
+              color: Colors.black,
+            ),
           ),
           child: Row(
             children: [
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.only(left: 16),
-                  child: _folded
-                      ? null
-                      : const TextField(
+                  child: !_folded
+                      ? const TextField(
                     decoration: InputDecoration(
                       hintText: 'Search',
                       hintStyle: TextStyle(color: Colors.black),
                       border: InputBorder.none,
                     ),
-                  ),
+                  )
+                      : null,
                 ),
               ),
               InkWell(
                 onTap: _toggle,
-                borderRadius: BorderRadius.circular(32),
+                borderRadius: BorderRadius.circular(5),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Icon(
-                    _folded ? Icons.search : Icons.close,
-                    color: Colors.black,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      FadeTransition(
+                        opacity: _iconFadeOutAnimation,
+                        child: Icon(Icons.search, color: Colors.black),
+                      ),
+                      FadeTransition(
+                        opacity: _iconFadeInAnimation,
+                        child: Icon(Icons.close, color: Colors.black),
+                      ),
+                    ],
                   ),
                 ),
               ),
