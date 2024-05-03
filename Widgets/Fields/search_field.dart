@@ -13,6 +13,9 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with SingleTicker
   late Animation<double> _widthAnimation;
   late Animation<double> _iconFadeInAnimation;
   late Animation<double> _iconFadeOutAnimation;
+  final FocusNode _focusNode = FocusNode();
+  final TextEditingController _textEditingController = TextEditingController();
+  double _targetWidth = 58.0;
 
   @override
   void initState() {
@@ -22,9 +25,6 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with SingleTicker
       vsync: this,
     );
 
-    _widthAnimation = Tween<double>(begin: 58.0, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
     _iconFadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeIn),
     );
@@ -34,8 +34,20 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with SingleTicker
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final screenWidth = MediaQuery.of(context).size.width;
+    _targetWidth = screenWidth * 0.7;
+    _widthAnimation = Tween<double>(begin: 58.0, end: _targetWidth).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
+    _textEditingController.dispose();
     super.dispose();
   }
 
@@ -43,22 +55,19 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with SingleTicker
     setState(() {
       _folded = !_folded;
       if (_folded) {
+        _focusNode.unfocus();
         _controller.reverse();
       } else {
         _controller.forward();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _focusNode.requestFocus();
+        });
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final double targetWidth = screenWidth * 0.7;
-    _widthAnimation = Tween<double>(begin: 58.0, end: targetWidth).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-
     return AnimatedBuilder(
       animation: Listenable.merge([_controller, _widthAnimation]),
       builder: (context, child) {
@@ -69,7 +78,7 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with SingleTicker
             borderRadius: BorderRadius.circular(5),
             color: Colors.white,
             border: Border.all(
-              color: Colors.black,
+              color: _folded ? Colors.white : Colors.black,
             ),
           ),
           child: Row(
@@ -78,11 +87,20 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with SingleTicker
                 child: Container(
                   padding: const EdgeInsets.only(left: 16),
                   child: !_folded
-                      ? const TextField(
-                    decoration: InputDecoration(
+                      ? TextField(
+                  textCapitalization: TextCapitalization.sentences,
+                    focusNode: _focusNode,
+                    controller: _textEditingController,
+                    style: const TextStyle(
+                      color: Colors.black,
+                    ),
+                    decoration: const InputDecoration(
                       hintText: 'Search',
                       hintStyle: TextStyle(color: Colors.black),
                       border: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none
                     ),
                   )
                       : null,
@@ -98,11 +116,11 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with SingleTicker
                     children: [
                       FadeTransition(
                         opacity: _iconFadeOutAnimation,
-                        child: Icon(Icons.search, color: Colors.black),
+                        child: const Icon(Icons.search, color: Colors.black),
                       ),
                       FadeTransition(
                         opacity: _iconFadeInAnimation,
-                        child: Icon(Icons.close, color: Colors.black),
+                        child: const Icon(Icons.close, color: Colors.black),
                       ),
                     ],
                   ),
